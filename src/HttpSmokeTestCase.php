@@ -9,22 +9,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 abstract class HttpSmokeTestCase extends KernelTestCase
 {
-    protected const APP_ENV = 'test';
+    protected const APP_ENV   = 'test';
     protected const APP_DEBUG = false;
-
-    /**
-     * Sets up the fixture, for example, open a network connection.
-     * This method is called before data provider is executed and before each test.
-     */
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        static::bootKernel([
-            'environment' => static::APP_ENV,
-            'debug' => static::APP_DEBUG,
-        ]);
-    }
 
     /**
      * The main test method for smoke testing of all routes in your application.
@@ -34,6 +20,7 @@ abstract class HttpSmokeTestCase extends KernelTestCase
      * createRequest or handleRequest method.
      *
      * @param \Shopsys\HttpSmokeTesting\RequestDataSet $requestDataSet
+     *
      * @dataProvider httpResponseTestDataProvider
      */
     final public function testHttpResponse(RequestDataSet $requestDataSet)
@@ -50,6 +37,81 @@ abstract class HttpSmokeTestCase extends KernelTestCase
         $response = $this->handleRequest($request);
 
         $this->assertResponse($response, $requestDataSet);
+    }
+
+    /**
+     * @param \Shopsys\HttpSmokeTesting\RequestDataSet $requestDataSet
+     * @param string                                   $message
+     *
+     * @return string
+     */
+    protected function getMessageWithDebugNotes(RequestDataSet $requestDataSet, $message)
+    {
+        if (count($requestDataSet->getDebugNotes()) > 0) {
+            $indentedDebugNotes = array_map(function ($debugNote) {
+                return "\n" . '  - ' . $debugNote;
+            },
+                $requestDataSet->getDebugNotes());
+            $message            .= "\n" . 'Notes for this data set:' . implode($indentedDebugNotes);
+        }
+
+        return $message;
+    }
+
+    /**
+     * @param \Shopsys\HttpSmokeTesting\RequestDataSet $requestDataSet
+     *
+     * @return \Symfony\Component\HttpFoundation\Request
+     */
+    protected function createRequest(RequestDataSet $requestDataSet)
+    {
+        $uri = $this->getRouterAdapter()->generateUri($requestDataSet);
+
+        $request = Request::create($uri);
+
+        $requestDataSet->getAuth()
+                       ->authenticateRequest($request);
+
+        return $request;
+    }
+
+    /**
+     * @return \Shopsys\HttpSmokeTesting\RouterAdapter\RouterAdapterInterface
+     */
+    protected function getRouterAdapter()
+    {
+        $router = static::$kernel->getContainer()->get('router');
+
+        return new SymfonyRouterAdapter($router);
+    }
+
+    /**
+     * @param \Symfony\Component\HttpFoundation\Request $request
+     *
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    protected function handleRequest(Request $request)
+    {
+        return static::$kernel->handle($request);
+    }
+
+    /**
+     * @param \Symfony\Component\HttpFoundation\Response $response
+     * @param \Shopsys\HttpSmokeTesting\RequestDataSet   $requestDataSet
+     */
+    protected function assertResponse(Response $response, RequestDataSet $requestDataSet)
+    {
+        $failMessage = sprintf(
+            'Failed asserting that status code %d for route "%s" is identical to expected %d',
+            $response->getStatusCode(),
+            $requestDataSet->getRouteName(),
+            $requestDataSet->getExpectedStatusCode()
+        );
+        $this->assertSame(
+            $requestDataSet->getExpectedStatusCode(),
+            $response->getStatusCode(),
+            $this->getMessageWithDebugNotes($requestDataSet, $failMessage)
+        );
     }
 
     /**
@@ -75,28 +137,32 @@ abstract class HttpSmokeTestCase extends KernelTestCase
         $routeConfigCustomizer = new RouteConfigCustomizer($requestDataSetGenerators);
 
         $this->customizeRouteConfigs($routeConfigCustomizer);
-
+        /* @var RequestDataSet[] $requestDataSets */
         $requestDataSets = [];
         foreach ($requestDataSetGenerators as $requestDataSetGenerator) {
             $requestDataSets = array_merge($requestDataSets, $requestDataSetGenerator->generateRequestDataSets());
         }
 
-        return array_map(
-            function (RequestDataSet $requestDataSet) {
-                return [$requestDataSet];
-            },
-            $requestDataSets
-        );
+        $return = [];
+        foreach ($requestDataSets as $requestDataSet) {
+            $return[$requestDataSet->getRouteName()] = [$requestDataSet];
+        }
+
+        return $return;
     }
 
     /**
-     * @return \Shopsys\HttpSmokeTesting\RouterAdapter\RouterAdapterInterface
+     * Sets up the fixture, for example, open a network connection.
+     * This method is called before data provider is executed and before each test.
      */
-    protected function getRouterAdapter()
+    protected function setUp(): void
     {
-        $router = static::$kernel->getContainer()->get('router');
+        parent::setUp();
 
-        return new SymfonyRouterAdapter($router);
+        static::bootKernel([
+                               'environment' => static::APP_ENV,
+                               'debug'       => static::APP_DEBUG,
+                           ]);
     }
 
     /**
@@ -105,65 +171,4 @@ abstract class HttpSmokeTestCase extends KernelTestCase
      * @param \Shopsys\HttpSmokeTesting\RouteConfigCustomizer $routeConfigCustomizer
      */
     abstract protected function customizeRouteConfigs(RouteConfigCustomizer $routeConfigCustomizer);
-
-    /**
-     * @param \Shopsys\HttpSmokeTesting\RequestDataSet $requestDataSet
-     * @return \Symfony\Component\HttpFoundation\Request
-     */
-    protected function createRequest(RequestDataSet $requestDataSet)
-    {
-        $uri = $this->getRouterAdapter()->generateUri($requestDataSet);
-
-        $request = Request::create($uri);
-
-        $requestDataSet->getAuth()
-            ->authenticateRequest($request);
-
-        return $request;
-    }
-
-    /**
-     * @param \Symfony\Component\HttpFoundation\Request $request
-     * @return \Symfony\Component\HttpFoundation\Response
-     */
-    protected function handleRequest(Request $request)
-    {
-        return static::$kernel->handle($request);
-    }
-
-    /**
-     * @param \Symfony\Component\HttpFoundation\Response $response
-     * @param \Shopsys\HttpSmokeTesting\RequestDataSet $requestDataSet
-     */
-    protected function assertResponse(Response $response, RequestDataSet $requestDataSet)
-    {
-        $failMessage = sprintf(
-            'Failed asserting that status code %d for route "%s" is identical to expected %d',
-            $response->getStatusCode(),
-            $requestDataSet->getRouteName(),
-            $requestDataSet->getExpectedStatusCode()
-        );
-        $this->assertSame(
-            $requestDataSet->getExpectedStatusCode(),
-            $response->getStatusCode(),
-            $this->getMessageWithDebugNotes($requestDataSet, $failMessage)
-        );
-    }
-
-    /**
-     * @param \Shopsys\HttpSmokeTesting\RequestDataSet $requestDataSet
-     * @param string $message
-     * @return string
-     */
-    protected function getMessageWithDebugNotes(RequestDataSet $requestDataSet, $message)
-    {
-        if (count($requestDataSet->getDebugNotes()) > 0) {
-            $indentedDebugNotes = array_map(function ($debugNote) {
-                return "\n" . '  - ' . $debugNote;
-            }, $requestDataSet->getDebugNotes());
-            $message .= "\n" . 'Notes for this data set:' . implode($indentedDebugNotes);
-        }
-
-        return $message;
-    }
 }

@@ -23,10 +23,10 @@
     "require": {
         "php": "^8.3",
         "phpunit/phpunit": "^11.2.1",
-        "symfony/framework-bundle": "^5.4",
-        "symfony/http-foundation": "^5.4",
-        "symfony/dependency-injection": "^5.4",
-        "symfony/routing": "^5.4",
+        "symfony/framework-bundle": "^6.4",
+        "symfony/http-foundation": "^6.4",
+        "symfony/dependency-injection": "^6.4",
+        "symfony/routing": "^6.4",
         "doctrine/annotations": "^1.10.4"
     }
 }

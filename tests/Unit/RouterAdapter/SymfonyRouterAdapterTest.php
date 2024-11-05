@@ -13,6 +13,7 @@ use Shopsys\HttpSmokeTesting\RouteInfo;
 use Shopsys\HttpSmokeTesting\RouterAdapter\SymfonyRouterAdapter;
 use Shopsys\HttpSmokeTesting\Test\TestController;
 use Symfony\Bundle\FrameworkBundle\Routing\AnnotatedRouteControllerLoader;
+use Symfony\Bundle\FrameworkBundle\Routing\AttributeRouteControllerLoader;
 use Symfony\Component\Routing\Router;
 
 class SymfonyRouterAdapterTest extends TestCase
@@ -20,7 +21,7 @@ class SymfonyRouterAdapterTest extends TestCase
     public function testGetAllRouteInfoExtractsInformationFromRouteCollection()
     {
         $router = new Router(
-            new AnnotatedRouteControllerLoader(new AnnotationReader()),
+            new AttributeRouteControllerLoader(),
             TestController::class,
         );
 

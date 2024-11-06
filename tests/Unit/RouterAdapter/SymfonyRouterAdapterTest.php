@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\HttpSmokeTesting\Unit\RouterAdapter;
 
-use Doctrine\Common\Annotations\AnnotationReader;
 use PHPUnit\Framework\TestCase;
 use Shopsys\HttpSmokeTesting\Annotation\DataSet;
 use Shopsys\HttpSmokeTesting\Annotation\Parameter;
@@ -12,7 +11,6 @@ use Shopsys\HttpSmokeTesting\Annotation\Skipped;
 use Shopsys\HttpSmokeTesting\RouteInfo;
 use Shopsys\HttpSmokeTesting\RouterAdapter\SymfonyRouterAdapter;
 use Shopsys\HttpSmokeTesting\Test\TestController;
-use Symfony\Bundle\FrameworkBundle\Routing\AnnotatedRouteControllerLoader;
 use Symfony\Bundle\FrameworkBundle\Routing\AttributeRouteControllerLoader;
 use Symfony\Component\Routing\Router;
 
